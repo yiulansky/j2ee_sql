@@ -1,0 +1,83 @@
+# ======================
+# 1. 构建产物（必须屏蔽，完全无用）
+# ======================
+target/
+build/
+dependency-reduced-pom.xml
+*.jar
+*.war
+*.ear
+
+# ======================
+# 2. IDE 配置文件（避免团队开发时的环境冲突）
+# ======================
+# IntelliJ IDEA（适配你当前的开发环境）
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# STS/Eclipse
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# ======================
+# 3. Maven 相关无用文件
+# ======================
+.mvn/wrapper/maven-wrapper.jar
+HELP.md
+mvnw
+mvnw.cmd
+
+# ======================
+# 4. 敏感配置文件（重点！防止密码/密钥泄露）
+# ======================
+# 屏蔽所有环境配置文件，避免敏感信息提交到仓库
+application.properties
+application.yml
+application.yaml
+application-*.properties
+application-*.yml
+application-*.yaml
+
+# 可选：保留无敏感信息的配置模板（如果需要给团队参考）
+# !application.properties.example
+# !application.yml.example
+
+# ======================
+# 5. 日志与临时文件
+# ======================
+*.log
+*.log.*
+spring.log
+*.out
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# ======================
+# 6. 系统垃圾文件
+# ======================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Mac
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~

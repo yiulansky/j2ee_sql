@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${projectName}">五子棋</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(15, 30px);
+            margin: 20px 0;
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .b { background: black; border-radius: 50%; width: 24px; height: 24px; }
+        .w { background: white; border: 1px solid #000; border-radius: 50%; width: 24px; height: 24px; }
+        .btn { margin: 5px; padding: 8px 16px; cursor: pointer; }
+        #record-list, #save-list {
+            margin-top: 20px;
+            width: 450px;
+            min-height: 50px;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+<h1 th:text="${projectName}"></h1>
+<p>当前回合：<span id="current"></span></p>
+<p id="winner" style="color:red;font-weight:bold;"></p>
+
+<div>
+    黑棋：<input id="p1" value="玩家1">
+    白棋：<input id="p2" value="玩家2">
+</div>
+
+<!-- 五子棋棋盘 -->
+<div id="board" class="board">
+    <th:block th:each="row,r:${chessBoard}">
+        <th:block th:each="col,c:${row}">
+            <div class="cell" th:data-row="${r.index}" th:data-col="${c.index}">
+                <div th:if="${chessBoard[r.index][c.index] == 1}" class="b"></div>
+                <div th:if="${chessBoard[r.index][c.index] == 2}" class="w"></div>
+            </div>
+        </th:block>
+    </th:block>
+</div>
+
+<!-- 功能按钮 -->
+<button class="btn" id="reset">重置游戏</button>
+<button class="btn" id="save">保存胜负记录</button>
+<button class="btn" id="update">修改最后记录</button>
+<button class="btn" id="delete">删除最后记录</button>
+<button class="btn" id="saveBtn">保存游戏存档</button>
+
+<!-- 胜负记录列表 -->
+<div id="record-list">暂无记录</div>
+<!-- 游戏存档列表（修复：新增缺失的容器） -->
+<div id="save-list">暂无存档</div>
+
+<script th:inline="javascript">
+    const BOARD_SIZE = /*[[${boardSize}]]*/ 15;
+    let state = null;
+    let recordList = [];
+
+    // 初始化
+    async function init(){
+        await refreshState();
+        await loadRecords();
+        await loadSaveList(); // 页面加载就获取存档列表
+        bindEvents();
+    }
+
+    // 刷新游戏状态
+    async function refreshState(){
+        let res = await fetch("/api/game/state");
+        state = await res.json();
+        render();
+    }
+
+    // 渲染棋盘
+    function render(){
+        document.querySelectorAll(".cell").forEach(cell=>{
+            let r = cell.dataset.row, c = cell.dataset.col;
+            let old = cell.querySelector(".b, .w");
+            if(old) old.remove();
+            if(state.board[r][c]){
+                let div = document.createElement("div");
+                div.className = state.board[r][c]==1?"b":"w";
+                cell.appendChild(div);
+            }
+        });
+        document.getElementById("current").innerText = state.currentPlayer==1?"黑棋":"白棋";
+        document.getElementById("winner").innerText = state.gameOver?state.winner+"获胜！":"";
+    }
+
+    // 加载胜负记录
+    async function loadRecords(){
+        let res = await fetch("/api/record");
+        recordList = await res.json();
+        let dom = document.getElementById("record-list");
+        dom.innerHTML = recordList.length===0?"暂无记录":"";
+        recordList.forEach(i=>{
+            dom.innerHTML += `<p>ID:${i.id} | ${i.player1} vs ${i.player2} | 胜者:${i.winner}</p>`;
+        });
+    }
+
+    // 绑定所有事件
+    function bindEvents(){
+        // 落子事件
+        document.querySelectorAll(".cell").forEach(cell=>{
+            cell.onclick = async ()=>{
+                if(state.gameOver) return;
+                let r = cell.dataset.row, c = cell.dataset.col;
+                await fetch(`/api/game/move?row=${r}&col=${c}`,{method:"POST"});
+                await refreshState();
+            }
+        });
+
+        // 重置游戏
+        document.getElementById("reset").onclick = async ()=>{
+            await fetch("/api/game/reset",{method:"POST"});
+            await refreshState();
+        };
+
+        // 保存胜负记录
+        document.getElementById("save").onclick = async ()=>{
+            if(!state.gameOver){alert("请先完成游戏！");return;}
+            let data = {
+                winner:state.winner,
+                player1:document.getElementById("p1").value,
+                player2:document.getElementById("p2").value
+            };
+            await fetch("/api/record",{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify(data)
+            });
+            await loadRecords();
+            alert("保存成功！");
+        };
+
+        // 修改最后一条记录
+        document.getElementById("update").onclick = async ()=>{
+            if(recordList.length===0){alert("暂无记录可修改！");return;}
+            let id = recordList[recordList.length-1].id;
+            let data = {
+                winner:state.winner||"黑棋",
+                player1:document.getElementById("p1").value,
+                player2:document.getElementById("p2").value
+            };
+            await fetch(`/api/record/${id}`,{
+                method:"PUT",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify(data)
+            });
+            await loadRecords();
+            alert("修改成功！");
+        };
+
+        // 删除最后一条记录
+        document.getElementById("delete").onclick = async ()=>{
+            if(recordList.length===0){alert("暂无记录可删除！");return;}
+            let id = recordList[recordList.length-1].id;
+            await fetch(`/api/record/${id}`,{method:"DELETE"});
+            await loadRecords();
+            alert("删除成功！");
+        };
+
+        // 保存游戏存档（JPA功能）
+        document.getElementById("saveBtn").onclick = async ()=>{
+            let name = prompt("请输入存档名称");
+            if(!name) return;
+            let res = await fetch(`/api/save/create?saveName=${name}`,{method:"POST"});
+            alert(await res.text());
+            await loadSaveList();
+        };
+
+        // 加载存档按钮（点击刷新列表）
+        document.getElementById("loadBtn").onclick = async ()=>{
+            await loadSaveList();
+        };
+    }
+
+    // 加载游戏存档列表（JPA功能）
+    async function loadSaveList(){
+        try {
+            let list = await fetch("/api/save/list");
+            let data = await list.json();
+            let dom = document.getElementById("save-list");
+            dom.innerHTML = data.length===0 ? "暂无存档" : "";
+            data.forEach(item=>{
+                dom.innerHTML += `<p>ID:${item.id} - ${item.saveName}
+                    <button class="btn" onclick="loadGame(${item.id})">加载</button></p>`;
+            });
+        } catch (e) {
+            document.getElementById("save-list").innerText = "加载存档失败";
+        }
+    }
+
+    // 加载指定存档（JPA功能）
+    async function loadGame(id){
+        let res = await fetch(`/api/save/load/${id}`);
+        alert(await res.text());
+        location.reload();
+    }
+
+    // 启动项目
+    init();
+</script>
+</body>
+</html>
