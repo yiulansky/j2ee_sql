@@ -1,22 +1,29 @@
 package com.classproject.j2ee_sql.controller;
 
 import com.classproject.j2ee_sql.entity.ChessState;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/game")
+@Tag(name = "游戏对战", description = "五子棋游戏核心接口：获取状态、落子、重置")
 public class GameController {
     @Autowired
     private ChessState chessState;
 
+    @Operation(summary = "获取棋盘状态", description = "获取当前棋盘、当前玩家和游戏结束状态")
     @GetMapping("/state")
     public ChessState getState() {
         return chessState;
     }
 
+    @Operation(summary = "落子", description = "指定行列坐标下棋，自动判断胜负并切换玩家")
     @PostMapping("/move")
-    public ChessState move(@RequestParam int row, @RequestParam int col) {
+    public ChessState move(@Parameter(description = "行坐标（0-14）") @RequestParam int row,
+                           @Parameter(description = "列坐标（0-14）") @RequestParam int col) {
         if (chessState.isGameOver() || chessState.getBoard()[row][col] != 0) {
             return chessState;
         }
@@ -33,6 +40,7 @@ public class GameController {
         return chessState;
     }
 
+    @Operation(summary = "重置游戏", description = "清空棋盘，重置所有游戏状态为初始值")
     @PostMapping("/reset")
     public ChessState reset() {
         chessState.setBoard(new int[15][15]);

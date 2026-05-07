@@ -5,6 +5,9 @@ import com.classproject.j2ee_sql.entity.GameSave;
 import com.classproject.j2ee_sql.mapper.GameSaveMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
@@ -12,6 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/save")
+@Tag(name = "游戏存档", description = "保存/读取/加载游戏存档")
 public class GameSaveController {
 
     @Autowired
@@ -22,9 +26,9 @@ public class GameSaveController {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // 保存游戏存档（只存纯棋盘数组）
+    @Operation(summary = "保存游戏存档", description = "将当前棋盘状态保存为存档，只存储纯棋盘数组")
     @PostMapping("/create")
-    public String saveGame(@RequestParam String saveName) {
+    public String saveGame(@Parameter(description = "存档名称") @RequestParam String saveName) {
         try {
             // ✅ 只保存 board 二维数组，不保存整个对象
             String boardJson = objectMapper.writeValueAsString(chessState.getBoard());
@@ -37,15 +41,15 @@ public class GameSaveController {
         }
     }
 
-    // 获取所有存档
+    @Operation(summary = "获取存档列表", description = "获取所有已保存的游戏存档记录")
     @GetMapping("/list")
     public List<GameSave> getSaveList() {
         return gameSaveMapper.selectAllGameSaves();
     }
 
-    // 加载存档（兼容旧数据）
+    @Operation(summary = "加载存档", description = "根据存档ID加载存档，兼容旧的存档数据格式")
     @GetMapping("/load/{id}")
-    public String loadGame(@PathVariable Integer id) {
+    public String loadGame(@Parameter(description = "存档ID") @PathVariable Integer id) {
         try {
             GameSave save = gameSaveMapper.selectGameSaveById(id);
             String jsonStr = save.getBoardState();

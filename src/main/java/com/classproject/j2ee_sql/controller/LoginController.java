@@ -2,8 +2,9 @@ package com.classproject.j2ee_sql.controller;
 
 import com.classproject.j2ee_sql.entity.UserAdmin;
 import com.classproject.j2ee_sql.service.LoginService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,18 +13,16 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
-@Api(tags = "登录接口")
+@Tag(name = "登录管理", description = "用户登录与退出接口")
 public class LoginController {
 
     @Autowired
     private LoginService loginService;
 
-    /**
-     * 登录接口（保证有返回值，格式和前端完全匹配）
-     */
+    @Operation(summary = "用户登录", description = "根据用户名和密码进行登录认证，登录成功返回用户信息")
     @PostMapping("/login")
-    @ApiOperation(value = "登录")
-    public Map<String, Object> login(@RequestBody Map<String, String> loginData) {
+    public Map<String, Object> login(@Parameter(description = "登录请求体，包含 username 和 password")
+                                         @RequestBody Map<String, String> loginData) {
         Map<String, Object> result = new HashMap<>();
 
         try {
@@ -55,11 +54,8 @@ public class LoginController {
         return result;
     }
 
-    /**
-     * 退出登录
-     */
+    @Operation(summary = "退出登录", description = "用户退出登录，清除会话状态")
     @PostMapping("/logout")
-    @ApiOperation("退出")
     public Map<String, Object> logout() {
         Map<String, Object> result = new HashMap<>();
         result.put("code", 200);
