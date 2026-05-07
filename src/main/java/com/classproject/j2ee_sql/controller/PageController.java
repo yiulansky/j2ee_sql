@@ -18,6 +18,12 @@ public class PageController {
         return "wuziqi";
     }
 
+    @GetMapping({"/login.html", "/login"})
+    public String loginPage() {
+        // 注意：这里返回 "login"，对应 templates/login.html
+        return "login";
+    }
+
     public static ChessState getChessState() {
         return chessState;
     }
