@@ -15,6 +15,7 @@ public class J2eeSqlApplication {
 
     @Bean
     public ChessState chessState() {
+        String a;
         return new ChessState();
     }
 }
