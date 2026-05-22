@@ -6,10 +6,16 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/game")
+@EnableScheduling
 @Tag(name = "游戏对战", description = "五子棋游戏核心接口：获取状态、落子、重置")
 public class GameController {
 
@@ -43,6 +49,20 @@ public class GameController {
         return getChessState();
     }
 
+    @Operation(summary = "获取对局计时", description = "获取当前对局的已用秒数")
+    @GetMapping("/time")
+    public Map<String, Object> getTime() {
+        ChessState state = getChessState();
+        Map<String, Object> result = new HashMap<>();
+        if (state.getStartTime() != null && !state.isGameOver()) {
+            long elapsed = (System.currentTimeMillis() - state.getStartTime()) / 1000;
+            result.put("elapsedSeconds", (int) elapsed);
+        } else {
+            result.put("elapsedSeconds", state.getElapsedSeconds());
+        }
+        return result;
+    }
+
     @Operation(summary = "落子", description = "指定行列坐标下棋，自动判断胜负并切换玩家")
     @PostMapping("/move")
     public ChessState move(@Parameter(description = "行坐标（0-14）") @RequestParam int row,
@@ -53,12 +73,20 @@ public class GameController {
             return chessState;
         }
 
+        // 第一次落子时记录开始时间
+        if (chessState.getStartTime() == null) {
+            chessState.setStartTime(System.currentTimeMillis());
+        }
+
         int currentPlayer = chessState.getCurrentPlayer();
         chessState.getBoard()[row][col] = currentPlayer;
 
         if (checkWin(chessState, row, col, currentPlayer)) {
             chessState.setGameOver(true);
             chessState.setWinner(currentPlayer == 1 ? "黑棋" : "白棋");
+            // 游戏结束时记录已用秒数
+            long elapsed = (System.currentTimeMillis() - chessState.getStartTime()) / 1000;
+            chessState.setElapsedSeconds((int) elapsed);
         } else {
             chessState.setCurrentPlayer(currentPlayer == 1 ? 2 : 1);
         }
@@ -75,8 +103,23 @@ public class GameController {
         chessState.setCurrentPlayer(1);
         chessState.setGameOver(false);
         chessState.setWinner(null);
+        chessState.setStartTime(null);
+        chessState.setElapsedSeconds(0);
         saveChessState(chessState);
         return chessState;
+    }
+
+    /**
+     * 定时任务：每秒更新一次 elapsedSeconds，保持前端计时准确
+     */
+    @Scheduled(fixedRate = 1000)
+    public void updateTimer() {
+        ChessState state = getChessState();
+        if (state.getStartTime() != null && !state.isGameOver()) {
+            long elapsed = (System.currentTimeMillis() - state.getStartTime()) / 1000;
+            state.setElapsedSeconds((int) elapsed);
+            saveChessState(state);
+        }
     }
 
     private boolean checkWin(ChessState chessState, int r, int c, int player) {

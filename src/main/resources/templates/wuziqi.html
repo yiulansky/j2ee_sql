@@ -323,6 +323,7 @@
 
     <div class="info-bar">
         <p>当前回合：<span id="current"></span></p>
+        <p>⏱️ 对局时间：<span id="timer">00:00</span></p>
         <p id="winner" style="color:red;font-weight:bold;"></p>
     </div>
 
@@ -436,6 +437,42 @@ function checkLogin() {
         window.location.href = "/login.html";
     }
 
+    // 计时器相关
+    let timerInterval = null;
+
+    // 格式化秒数为 MM:SS
+    function formatTime(seconds) {
+        let m = Math.floor(seconds / 60);
+        let s = seconds % 60;
+        return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+
+    // 更新计时器显示
+    async function updateTimerDisplay() {
+        try {
+            let res = await authFetch("/api/game/time");
+            let data = await res.json();
+            document.getElementById("timer").innerText = formatTime(data.elapsedSeconds || 0);
+        } catch (e) {
+            // 忽略错误
+        }
+    }
+
+    // 启动计时器轮询
+    function startTimer() {
+        if (timerInterval) clearInterval(timerInterval);
+        updateTimerDisplay();
+        timerInterval = setInterval(updateTimerDisplay, 1000);
+    }
+
+    // 停止计时器轮询
+    function stopTimer() {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+    }
+
     // 初始化
     async function init(){
         // 先检查登录
@@ -448,6 +485,8 @@ function checkLogin() {
         await loadRecords();
         await loadSaveList();
         bindEvents();
+        // 启动计时器
+        startTimer();
     }
 
     // 刷新游戏状态
@@ -505,10 +544,14 @@ function checkLogin() {
         // 保存胜负记录
         document.getElementById("save").onclick = async ()=>{
             if(!state.gameOver){alert("请先完成游戏！");return;}
+            // 获取当前对局时长
+            let timeRes = await authFetch("/api/game/time");
+            let timeData = await timeRes.json();
             let data = {
                 winner:state.winner,
                 player1:document.getElementById("p1").value,
-                player2:document.getElementById("p2").value
+                player2:document.getElementById("p2").value,
+                duration: timeData.elapsedSeconds || 0
             };
             await authFetch("/api/record",{
                 method:"POST",

@@ -5,6 +5,8 @@ public class GameRecord {
     private String player1;
     private String player2;
     private String winner;
+    /** 对局时长（秒） */
+    private Integer duration;
 
     // getter & setter
     public Integer getId() {
@@ -37,5 +39,13 @@ public class GameRecord {
 
     public void setWinner(String winner) {
         this.winner = winner;
+    }
+
+    public Integer getDuration() {
+        return duration;
+    }
+
+    public void setDuration(Integer duration) {
+        this.duration = duration;
     }
 }

@@ -9,7 +9,7 @@ import java.util.List;
 public interface GameRecordMapper {
 
 
-    @Insert("INSERT INTO game_record (player1, player2, winner) VALUES (#{player1}, #{player2}, #{winner})")
+    @Insert("INSERT INTO game_record (player1, player2, winner, duration) VALUES (#{player1}, #{player2}, #{winner}, #{duration})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insertGameRecord(GameRecord record);
 
@@ -17,7 +17,7 @@ public interface GameRecordMapper {
     List<GameRecord> selectAllGameRecords();
 
 
-    @Update("UPDATE game_record SET player1=#{player1}, player2=#{player2}, winner=#{winner} WHERE id=#{id}")
+    @Update("UPDATE game_record SET player1=#{player1}, player2=#{player2}, winner=#{winner}, duration=#{duration} WHERE id=#{id}")
     void updateGameRecord(GameRecord record);
 
     @Delete("DELETE FROM game_record WHERE id = #{id}")

@@ -7,6 +7,8 @@ public class GameSave {
     private String saveName;    // 存档名称
     private String boardState; // 棋盘状态（JSON字符串）
     private LocalDateTime saveTime; // 存档时间
+    /** 对局时长（秒） */
+    private Integer duration;
 
     // 无参构造
     public GameSave() {}
@@ -27,4 +29,6 @@ public class GameSave {
     public void setBoardState(String boardState) { this.boardState = boardState; }
     public LocalDateTime getSaveTime() { return saveTime; }
     public void setSaveTime(LocalDateTime saveTime) { this.saveTime = saveTime; }
+    public Integer getDuration() { return duration; }
+    public void setDuration(Integer duration) { this.duration = duration; }
 }

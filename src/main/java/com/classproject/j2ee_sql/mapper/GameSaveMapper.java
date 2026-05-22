@@ -16,7 +16,7 @@ public interface GameSaveMapper {
     /**
      * 保存棋盘存档
      */
-    @Insert("INSERT INTO game_save (save_name, board_state, save_time) VALUES (#{saveName}, #{boardState}, #{saveTime})")
+    @Insert("INSERT INTO game_save (save_name, board_state, save_time, duration) VALUES (#{saveName}, #{boardState}, #{saveTime}, #{duration})")
     void insertGameSave(GameSave save);
 
     /**

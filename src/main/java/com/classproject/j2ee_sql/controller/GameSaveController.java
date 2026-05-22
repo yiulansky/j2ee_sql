@@ -47,6 +47,8 @@ public class GameSaveController {
             // 只保存 board 二维数组
             String boardJson = objectMapper.writeValueAsString(currentState.getBoard());
             GameSave save = new GameSave(null, saveName, boardJson, LocalDateTime.now());
+            // 保存对局时长
+            save.setDuration(currentState.getElapsedSeconds());
             gameSaveMapper.insertGameSave(save);
 
             // 清除存档列表缓存
@@ -77,7 +79,7 @@ public class GameSaveController {
         return saves;
     }
 
-    @Operation(summary = "加载存档", description = "根据存档ID加载存档，兼容旧的存档数据格式")
+    @Operation(summary = "加载存档", description = "根据存档ID加载存档，兼容旧的存档数据格式，同时恢复对局时长")
     @GetMapping("/load/{id}")
     public String loadGame(@Parameter(description = "存档ID") @PathVariable Integer id) {
         try {
@@ -100,6 +102,11 @@ public class GameSaveController {
             loadedState.setCurrentPlayer(1);
             loadedState.setGameOver(false);
             loadedState.setWinner(null);
+            // 恢复对局时长
+            int duration = save.getDuration() != null ? save.getDuration() : 0;
+            loadedState.setElapsedSeconds(duration);
+            // 重新设置开始时间，使计时器从存档时的时长继续走动
+            loadedState.setStartTime(System.currentTimeMillis() - duration * 1000L);
             redisTemplate.opsForValue().set("game:chess:state", loadedState);
 
             return "加载成功";
