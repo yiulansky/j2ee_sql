@@ -84,11 +84,40 @@
             transform: translateY(0);
             box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
+        .btn-success {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            box-shadow: 0 4px 12px rgba(56, 239, 125, 0.3);
+        }
+        .btn-success:hover {
+            box-shadow: 0 6px 20px rgba(56, 239, 125, 0.45);
+        }
         .tip {
             text-align: center;
             margin-top: 20px;
             font-size: 13px;
             color: #666;
+        }
+        .switch-link {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 14px;
+            color: #a0a0c0;
+        }
+        .switch-link a {
+            color: #667eea;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .switch-link a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+        .error-msg {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #ff6b6b;
+            min-height: 20px;
         }
     </style>
 </head>
@@ -103,51 +132,117 @@
         <label>密码</label>
         <input type="password" id="password" placeholder="请输入密码" value="123456">
     </div>
-    <button class="btn" id="loginBtn">登录</button>
-    <div class="tip">测试账号：admin / 123456</div>
+    <div class="form-group" id="confirmPwdGroup" style="display:none;">
+        <label>确认密码</label>
+        <input type="password" id="confirmPwd" placeholder="请再次输入密码">
+    </div>
+    <button class="btn" id="actionBtn">登录</button>
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="switch-link">
+        <span id="switchText">还没有账号？</span>
+        <a id="switchBtn">去注册</a>
+    </div>
+    <div class="tip" id="tipText">测试账号：admin / 123456</div>
 </div>
 
 <script>
-    // 登录按钮点击事件
-    document.getElementById("loginBtn").onclick = async function() {
-        let username = document.getElementById("username").value;
-        let password = document.getElementById("password").value;
+    let isLoginMode = true;
 
-        if (!username || !password) {
-            alert("请输入用户名和密码！");
-            return;
-        }
-
-        try {
-            // 调用后端登录接口
-            let res = await fetch("/api/login", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({username: username, password: password})
-            });
-
-            let data = await res.json();
-
-            if (data.code === 200) {
-                // 登录成功：保存用户信息和token到本地
-                localStorage.setItem("token", data.token || "");
-                localStorage.setItem("user", JSON.stringify(data.user));
-                alert("登录成功！");
-                // 跳转到五子棋页面
-                window.location.href = "/";
-            } else {
-                alert(data.msg || "登录失败！");
-            }
-        } catch (e) {
-            alert("登录请求失败，请检查后端！");
-            console.error(e);
+    // 切换登录/注册模式
+    document.getElementById("switchBtn").onclick = function() {
+        isLoginMode = !isLoginMode;
+        if (isLoginMode) {
+            document.getElementById("actionBtn").textContent = "登录";
+            document.getElementById("switchText").textContent = "还没有账号？";
+            document.getElementById("switchBtn").textContent = "去注册";
+            document.getElementById("confirmPwdGroup").style.display = "none";
+            document.getElementById("tipText").style.display = "block";
+            document.getElementById("errorMsg").textContent = "";
+        } else {
+            document.getElementById("actionBtn").textContent = "注册";
+            document.getElementById("switchText").textContent = "已有账号？";
+            document.getElementById("switchBtn").textContent = "去登录";
+            document.getElementById("confirmPwdGroup").style.display = "block";
+            document.getElementById("tipText").style.display = "none";
+            document.getElementById("errorMsg").textContent = "";
         }
     };
 
-    // 回车登录
+    // 主按钮点击事件（登录或注册）
+    document.getElementById("actionBtn").onclick = async function() {
+        let username = document.getElementById("username").value;
+        let password = document.getElementById("password").value;
+        let errorMsg = document.getElementById("errorMsg");
+
+        if (!username || !password) {
+            errorMsg.textContent = "请输入用户名和密码！";
+            return;
+        }
+
+        if (isLoginMode) {
+            // ====== 登录 ======
+            try {
+                let res = await fetch("/api/login", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({username: username, password: password})
+                });
+
+                let data = await res.json();
+
+                if (data.code === 200) {
+                    localStorage.setItem("token", data.token || "");
+                    localStorage.setItem("user", JSON.stringify(data.user));
+                    alert("登录成功！");
+                    window.location.href = "/";
+                } else {
+                    errorMsg.textContent = data.msg || "登录失败！";
+                }
+            } catch (e) {
+                errorMsg.textContent = "登录请求失败，请检查后端！";
+                console.error(e);
+            }
+        } else {
+            // ====== 注册 ======
+            let confirmPwd = document.getElementById("confirmPwd").value;
+            if (password !== confirmPwd) {
+                errorMsg.textContent = "两次密码输入不一致！";
+                return;
+            }
+
+            try {
+                let res = await fetch("/api/register", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({username: username, password: password})
+                });
+
+                let data = await res.json();
+
+                if (data.code === 200) {
+                    alert("注册成功！请登录");
+                    // 切换到登录模式
+                    document.getElementById("switchBtn").click();
+                    document.getElementById("errorMsg").textContent = "";
+                } else {
+                    errorMsg.textContent = data.msg || "注册失败！";
+                }
+            } catch (e) {
+                errorMsg.textContent = "注册请求失败，请检查后端！";
+                console.error(e);
+            }
+        }
+    };
+
+    // 回车触发主按钮
     document.getElementById("password").onkeydown = function(e) {
         if (e.key === "Enter") {
-            document.getElementById("loginBtn").click();
+            document.getElementById("actionBtn").click();
+        }
+    };
+    document.getElementById("confirmPwd").onkeydown = function(e) {
+        if (e.key === "Enter") {
+            document.getElementById("actionBtn").click();
         }
     };
 </script>

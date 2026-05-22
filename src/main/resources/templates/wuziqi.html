@@ -372,6 +372,31 @@
     let state = null;
     let recordList = [];
 
+// ========== 获取 token 并构造请求头 ==========
+function getAuthHeaders(extraHeaders = {}) {
+    let token = localStorage.getItem("token");
+    let headers = { ...extraHeaders };
+    if (token) {
+        headers["Authorization"] = "Bearer " + token;
+    }
+    return headers;
+}
+
+// ========== 带 token 的 fetch 封装 ==========
+async function authFetch(url, options = {}) {
+    let headers = getAuthHeaders(options.headers || {});
+    let res = await fetch(url, { ...options, headers });
+    // 如果返回 401，跳转到登录页
+    if (res.status === 401) {
+        alert("登录已过期，请重新登录！");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login.html";
+        throw new Error("Unauthorized");
+    }
+    return res;
+}
+
 // ========== 修复后的登录检查 ==========
 function checkLogin() {
     let userStr = localStorage.getItem("user");
@@ -403,7 +428,7 @@ function checkLogin() {
     }
 }
 
-    // ========== 新增：退出登录 ==========
+    // ========== 退出登录 ==========
     function logout() {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
@@ -427,7 +452,7 @@ function checkLogin() {
 
     // 刷新游戏状态
     async function refreshState(){
-        let res = await fetch("/api/game/state");
+        let res = await authFetch("/api/game/state");
         state = await res.json();
         render();
     }
@@ -450,7 +475,7 @@ function checkLogin() {
 
     // 加载胜负记录
     async function loadRecords(){
-        let res = await fetch("/api/record");
+        let res = await authFetch("/api/record");
         recordList = await res.json();
         let dom = document.getElementById("record-list");
         dom.innerHTML = recordList.length===0?"暂无记录":"";
@@ -466,14 +491,14 @@ function checkLogin() {
             cell.onclick = async ()=>{
                 if(state.gameOver) return;
                 let r = cell.dataset.row, c = cell.dataset.col;
-                await fetch(`/api/game/move?row=${r}&col=${c}`,{method:"POST"});
+                await authFetch(`/api/game/move?row=${r}&col=${c}`,{method:"POST"});
                 await refreshState();
             }
         });
 
         // 重置游戏
         document.getElementById("reset").onclick = async ()=>{
-            await fetch("/api/game/reset",{method:"POST"});
+            await authFetch("/api/game/reset",{method:"POST"});
             await refreshState();
         };
 
@@ -485,7 +510,7 @@ function checkLogin() {
                 player1:document.getElementById("p1").value,
                 player2:document.getElementById("p2").value
             };
-            await fetch("/api/record",{
+            await authFetch("/api/record",{
                 method:"POST",
                 headers:{"Content-Type":"application/json"},
                 body:JSON.stringify(data)
@@ -503,7 +528,7 @@ function checkLogin() {
                 player1:document.getElementById("p1").value,
                 player2:document.getElementById("p2").value
             };
-            await fetch(`/api/record/${id}`,{
+            await authFetch(`/api/record/${id}`,{
                 method:"PUT",
                 headers:{"Content-Type":"application/json"},
                 body:JSON.stringify(data)
@@ -516,7 +541,7 @@ function checkLogin() {
         document.getElementById("delete").onclick = async ()=>{
             if(recordList.length===0){alert("暂无记录可删除！");return;}
             let id = recordList[recordList.length-1].id;
-            await fetch(`/api/record/${id}`,{method:"DELETE"});
+            await authFetch(`/api/record/${id}`,{method:"DELETE"});
             await loadRecords();
             alert("删除成功！");
         };
@@ -525,7 +550,7 @@ function checkLogin() {
         document.getElementById("saveBtn").onclick = async ()=>{
             let name = prompt("请输入存档名称");
             if(!name) return;
-            let res = await fetch(`/api/save/create?saveName=${name}`,{method:"POST"});
+            let res = await authFetch(`/api/save/create?saveName=${name}`,{method:"POST"});
             alert(await res.text());
             await loadSaveList();
         };
@@ -534,7 +559,7 @@ function checkLogin() {
     // 加载游戏存档列表
     async function loadSaveList(){
         try {
-            let list = await fetch("/api/save/list");
+            let list = await authFetch("/api/save/list");
             let data = await list.json();
             let dom = document.getElementById("save-list");
             dom.innerHTML = data.length===0 ? "暂无存档" : "";
@@ -549,7 +574,7 @@ function checkLogin() {
 
     // 加载指定存档
     async function loadGame(id){
-        let res = await fetch(`/api/save/load/${id}`);
+        let res = await authFetch(`/api/save/load/${id}`);
         alert(await res.text());
         location.reload();
     }
